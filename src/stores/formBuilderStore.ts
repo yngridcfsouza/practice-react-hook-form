@@ -6,6 +6,7 @@ interface FormField {
   id: string;
   label: string;
   type: FieldType;
+  required?: boolean;
   options?: string[];
 }
 
