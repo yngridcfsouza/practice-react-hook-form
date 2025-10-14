@@ -1,32 +1,10 @@
-import { useEffect, useState } from "react";
-import { Form } from "./Form";
-import { IUser } from "./IUser";
-import { sleep } from "./lib/utils";
-
-async function getUser() {
-  await sleep(100);
-
-  return {
-    age: 26,
-    city: 'Curitiba',
-    name: 'Mateus Silva',
-    street: 'Hoje não sequestrador',
-    zipcode: '88',
-  };
-}
+import FormPreview from "./pages/FormPreview";
 
 export function App() {
-  const [user, setUser] = useState({} as IUser);
-
-  useEffect(() => {
-    getUser()
-      .then(data => {
-        console.log('Terminou de buscar o user')
-        setUser(data)
-      });
-  }, []);
-
   return (
-    <Form user={user} />
+    <div className="size-[500px] flex justify-center items-center flex-col gap-4 m-auto p-10">
+      <h1 className="font-semibold text-2xl">Building Forms</h1>
+      <FormPreview />
+    </div>
   );
 }
