@@ -2,6 +2,7 @@ import { useState } from "react";
 import { FormBuilder } from "./components/FormBuilder";
 import { Button } from "./components/ui/Button";
 import FormPreview from "./pages/FormPreview";
+import { Toaster } from "sonner";
 
 export function App() {
   const [isVisible, setIsVisible] = useState(false);
@@ -26,6 +27,7 @@ export function App() {
           {isVisible ? "Fechar Formulário" : "Visualizar Formulário"}
         </Button>
       </div>
+      <Toaster richColors position="top-right" />
     </div>
   );
 }
