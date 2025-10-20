@@ -1,5 +1,8 @@
 import { Controller, useForm } from 'react-hook-form';
 import { useFormBuilderStore } from '../stores/formBuilderStore';
+import { useMemo } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { buildZodSchema } from '@/lib/schema';
 
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -12,8 +15,13 @@ import {
 } from "@/components/ui/Select";
 
 export default function FormPreview() {
-  const { register, handleSubmit, control, formState: { errors } } = useForm({ shouldUnregister: true });
   const { fields } = useFormBuilderStore();
+  const schema = useMemo(() => buildZodSchema(fields), [fields]);
+
+  const { register, handleSubmit, control, formState: { errors } } = useForm({
+    resolver: zodResolver(schema),
+    shouldUnregister: true,
+  });
 
   const onSubmit = (data: any) => {
     console.log('Resposta:', data);
@@ -40,7 +48,6 @@ export default function FormPreview() {
                   type={field.type}
                   {...register(field.id, {
                     ...baseRules,
-                    valueAsNumber: field.type === 'number' ? true : undefined,
                   })}
                 />
                 {errors[field.id] && (

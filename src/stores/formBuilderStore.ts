@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 export type FieldType = 'text' | 'number' | 'select' | 'checkbox';
 
-interface FormField {
+export interface FormField {
   id: string;
   label: string;
   type: FieldType;

@@ -1,7 +1,11 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Field, FieldType, useFormBuilderStore } from "@/stores/formBuilderStore";
 import { nanoid } from "nanoid";
+
 import { Reorder } from 'framer-motion';
+import { toast } from 'sonner';
+import { formModelSchema } from '@/lib/schema';
+import { encodeFormModel, decodeFormModel } from '@/lib/share';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +18,6 @@ import {
 } from "@/components/ui/dialog";
 import { Edit2, GripVertical, Trash } from 'lucide-react';
 import CreationFields from "@/components/CreationFields";
-import { toast } from 'sonner';
 
 export function FormBuilder() {
   const { fields, setFields, addField, updateField, removeField } = useFormBuilderStore();
@@ -25,6 +28,9 @@ export function FormBuilder() {
   const [newSelectOptions, setNewSelectOptions] = useState("");
 
   const [editingField, setEditingField] = useState<Field | null>(null);
+
+  const STORAGE_KEY = 'form:builder';
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resetCreationForm = () => {
     setNewLabel("");
@@ -62,8 +68,91 @@ export function FormBuilder() {
     setEditingField(field);
   };
 
+  const handleSave = () => {
+    const model = formModelSchema.parse({
+      version: '1',
+      fields,
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(model));
+    toast.success('Formulário salvo');
+  };
+
+  const handleLoad = () => {
+    const model = formModelSchema.parse(JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'));
+    setFields(model.fields);
+    toast.success('Formulário carregado');
+  };
+
+  const handleExport = () => {
+    const model = { version: '1', fields };
+    const dataStr = JSON.stringify(model, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'form.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Formulário exportado');
+  };
+
+  const triggerImport = () => fileInputRef.current?.click();
+
+  const onImportFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const result = formModelSchema.safeParse(parsed);
+      if (!result.success) {
+        toast.error('JSON inválido');
+        return;
+      }
+      setFields(result.data.fields);
+      toast.success('Formulário importado');
+    } catch {
+      toast.error('Erro ao importar JSON');
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  const handleGenerateLink = async () => {
+    const model = formModelSchema.parse({ version: '1', fields });
+    const payload = encodeFormModel(model);
+    const url = new URL(window.location.href);
+    url.searchParams.set('form', payload);
+    const shareUrl = url.toString();
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success('Link copiado para a área de transferência');
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = shareUrl;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      toast.success('Link copiado');
+    }
+  };
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const payload = url.searchParams.get('form');
+    if (!payload) return;
+    const result = decodeFormModel(payload);
+    if (result.success && result.data) {
+      setFields(result.data.fields);
+      toast.success('Formulário carregado pelo link');
+    } else {
+      toast.error('Link inválido');
+    }
+  }, [setFields]);
+
   return (
-    <div className="w-full max-w-xl rounded-lg border p-4 space-y-4">
+    <div className="w-full max-w-xl rounded-lg border p-4 space-y-4 min-w-fit">
       <div className="border-b pb-4 space-y-4">
         <h2 className="text-lg font-medium">Comece a montar seu formulário</h2>
         <h3 className="text-sm text-muted-foreground mt-1">Determine abaixo os campos que deseja incluir.</h3>
@@ -81,6 +170,20 @@ export function FormBuilder() {
           <Button type="button" onClick={handleAddField}>
             Adicionar campo
           </Button>
+        </div>
+        <div className="flex gap-2 mt-2">
+          <Button type="button" variant="outline" onClick={handleSave}>Salvar</Button>
+          <Button type="button" variant="outline" onClick={handleLoad}>Carregar</Button>
+          <Button type="button" variant="secondary" onClick={handleExport}>Exportar JSON</Button>
+          <Button type="button" variant="secondary" onClick={triggerImport}>Importar JSON</Button>
+          <Button type="button" variant="default" onClick={handleGenerateLink}>Gerar link</Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json"
+            className="hidden"
+            onChange={onImportFileChange}
+          />
         </div>
       </div>
 
